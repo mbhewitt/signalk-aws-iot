@@ -1,0 +1,33 @@
+{ #replace $yourIDxxxxxx with your accout number this is copy and pasted onto the aws policy for the iot
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Publish",
+        "iot:Receive"
+      ],
+      "Resource": [
+        "arn:aws:iot:us-west-2:$yourIDxxxxxx:topic/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Subscribe"
+      ],
+      "Resource": [
+        "arn:aws:iot:us-west-2:$yourIDxxxxxx:topicfilter/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Connect"
+      ],
+      "Resource": [
+        "arn:aws:iot:us-west-2:$yourIDxxxxxx:client/*"
+      ]
+    }
+  ]
+}

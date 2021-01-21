@@ -9,8 +9,8 @@ module.exports = (app) => {
   const setStatus = app.setPluginStatus || app.setProviderStatus;
   const setError = app.setPluginError || app.setProviderError;
 
-  plugin.id = 'signalk-aws-iot';
-  plugin.name = 'SignalK AWS IoT';
+  plugin.id = 'signalk-aws-iot2';
+  plugin.name = 'SignalK AWS IoT2';
   plugin.description = 'Plugin that sends data to AWS IoT Core';
 
   function isPublishState(options) {
@@ -45,12 +45,16 @@ module.exports = (app) => {
       // Not in a state where we want to send stuff
       return;
     }
-    const topic = options.single_topic ? 'signalk' : v.path.replace(/\./g, '/');
+    const topic = v.path.replace(/\./g, '/');
     app.debug(`PUB ${topic} ${JSON.stringify(v.value)}`);
     device.publish(topic, JSON.stringify(v.value));
   }
 
+  
   plugin.start = (options) => {
+    a=0;
+    flatten={};
+    flatten.epoch=Date.now();
     // Here we put our plugin logic
     app.debug('Plugin started');
     setStatus('Initializing');
@@ -61,7 +65,8 @@ module.exports = (app) => {
       privateKey: Buffer.from(options.aws_key || '', 'utf8'),
       clientCert: Buffer.from(options.aws_cert || '', 'utf8'),
       caCert: Buffer.from(options.aws_ca || '', 'utf8'),
-    });
+   });
+//    app.debug(`DEBUG AWS ${JSON.stringify(device)}`);
 
     const localSubscription = {
       context: 'vessels.self',
@@ -78,14 +83,34 @@ module.exports = (app) => {
         app.error(subscriptionError);
       },
       (delta) => {
+        t1=Date.now();
+        if(options.single_message&&t1-flatten.epoch>=options.send_interval*1000){
+           a=a+1;
+           var v={path: "signalk",value: flatten};
+//           app.debug(`DEBUG ${a} ${JSON.stringify(v)}`);
+           sendValue(v, options);
+           flatten.epoch=t1;
+        }
         if (!delta.updates) {
           return;
         }
+        flatten.context=delta.context;
         delta.updates.forEach((u) => {
           if (!u.values) {
             return;
           }
-          u.values.forEach((v) => sendValue(v, options));
+          flatten.timestamp=u.timestamp;
+          u.values.forEach((v) => {
+             path=v.path;
+             if(path!=""){
+                flatten[path]=v.value;
+             } else {
+                app.debug(`DEBUG Missing ${a} ${JSON.stringify(delta)}`);
+             }
+             if(!options.single_message){
+                sendValue(v, options);
+             }
+          });
         });
       },
     );
@@ -219,9 +244,9 @@ rqXRfboQnoZsG4q5WTP468SQvvG5
         title: 'How often to send data, in seconds',
         default: 10,
       },
-      single_topic: {
+      single_message: {
         type: 'boolean',
-        title: 'Publish all paths to a single topic',
+        title: 'Publish state including all updates in the past (send_interval) as a single message',
         default: false,
       },
     },
